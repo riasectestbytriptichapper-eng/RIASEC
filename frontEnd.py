@@ -204,7 +204,7 @@ Responses:
     # At this point, the email has been sent successfully.
     if st.session_state.email_sent:
         st.success(
-            "Results Have Been Sent to mycareerhorizons@gmail.com"
+            "Results Have Been Sent to mycareerhorizons@gmail.com /n"
             "Please contact Tripti Chapper at the Same Email to get your Detailed report."
         )
         # Optionally stop further execution so the banner remains and nothing else changes
