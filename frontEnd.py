@@ -70,10 +70,11 @@ for idx, (q, _) in enumerate(questions):
     cols = st.columns(5)
     for i in range(1, 6):
         selected = st.session_state.responses.get(idx) == i
-        btn_label = f"{i}"
+        btn_label = str(i)
         if selected:
             # Highlight selected in red
-            btn_html = f"""
+            cols[i - 1].markdown(
+                f"""
                 <style>
                 div.stButton > button#{idx}_{i} {{
                     background-color: #ff4d4d;
@@ -81,16 +82,16 @@ for idx, (q, _) in enumerate(questions):
                     font-weight: bold;
                 }}
                 </style>
-            """
-            st.markdown(btn_html, unsafe_allow_html=True)
+                """,
+                unsafe_allow_html=True,
+            )
 
         if cols[i - 1].button(btn_label, key=f"{idx}_{i}"):
             st.session_state.responses[idx] = i
-            st.experimental_rerun()  # Re-run to update button color immediately
+            # No experimental_rerun needed
 
 # ---------------- CHECK IF ALL ANSWERED ----------------
 all_answered = len(st.session_state.responses) == len(questions)
-
 st.markdown("---")
 submit = st.button("Submit Test", disabled=not all_answered)
 
