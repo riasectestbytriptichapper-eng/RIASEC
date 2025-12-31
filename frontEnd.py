@@ -1,7 +1,6 @@
 import streamlit as st
 from email.message import EmailMessage
 import smtplib
-import traceback
 
 st.set_page_config(page_title="RIASEC Test", layout="centered")
 
@@ -14,12 +13,13 @@ if "email_sent" not in st.session_state:
     st.session_state.email_sent = False
 if "responses" not in st.session_state:
     st.session_state.responses = {}
+if "scores" not in st.session_state:
+    st.session_state.scores = {"R":0,"I":0,"A":0,"S":0,"E":0,"C":0}
 if "info" not in st.session_state:
     st.session_state.info = {}
 
-st.title("RIASEC Career Interest Test")
-
 # ---------------- USER INFO ----------------
+st.title("RIASEC Career Interest Test")
 with st.form("info_form"):
     Name = st.text_input("Full Name")
     Age = st.number_input("Age", min_value=10, max_value=100, step=1)
@@ -69,30 +69,53 @@ questions = [
     ("I like influencing others", "E"),
 ]
 
+# ---------------- CSS FOR BUTTON STYLE ----------------
+st.markdown("""
+<style>
+.radio-horizontal .stRadio > div {
+    display: flex;
+    justify-content: space-between;
+    width: 300px;
+}
+.stRadio input[type="radio"]:checked + label {
+    background-color: red;
+    color: white;
+    border-radius: 4px;
+}
+.stRadio label {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid black;
+    cursor: pointer;
+    margin: 2px;
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.header("Answer each question (1 = Strongly Disagree, 5 = Strongly Agree)")
 
-# ---------------- QUESTION BUTTONS ----------------
-for idx, (q, _) in enumerate(questions):
-    st.write(f"**{q}**")
-    cols = st.columns(5)
-    for i in range(1,6):
-        selected = st.session_state.responses.get(idx) == i
-        with cols[i-1]:
-            if selected:
-                st.markdown('<div style="height:5px;background-color:red;margin-bottom:2px;"></div>', unsafe_allow_html=True)
-            if st.button(str(i), key=f"{idx}_{i}"):
-                st.session_state.responses[idx] = i
+# ---------------- TEST FORM ----------------
+with st.form("test_form"):
+    all_answered = True
+    for idx, (q, cat) in enumerate(questions):
+        st.write(f"**{q}**")
+        selected = st.radio("", [1,2,3,4,5], key=f"q_{idx}", horizontal=True)
+        if selected is None:
+            all_answered = False
+        st.session_state.responses[idx] = selected
 
-# Enable submit only if all questions are answered
-all_answered = len(st.session_state.responses) == len(questions)
-submit = st.button("Submit Test", disabled=not all_answered)
+    submit_disabled = not all_answered
+    submit = st.form_submit_button("Submit Test", disabled=submit_disabled)
 
 # ---------------- PROCESS SUBMISSION ----------------
 if submit and not st.session_state.submitted:
-    # Compute RIASEC scores
     scores = {"R":0,"I":0,"A":0,"S":0,"E":0,"C":0}
-    for idx, (_, cat) in enumerate(questions):
-        scores[cat] += st.session_state.responses[idx]
+    for idx, (q, cat) in enumerate(questions):
+        val = st.session_state.responses[idx]
+        scores[cat] += val
 
     st.session_state.scores = scores
     st.session_state.submitted = True
@@ -120,35 +143,22 @@ A: {scores['A']}
 S: {scores['S']}
 E: {scores['E']}
 C: {scores['C']}
-
-Detailed Responses:
 """
-    for idx, (q, cat) in enumerate(questions):
-        email_body += f"{q} ({cat}): {st.session_state.responses[idx]}\n"
 
     msg = EmailMessage()
-    try:
-        sender = st.secrets["EMAIL"]
-        receiver = st.secrets["RECEIVER"]
-        password = st.secrets["EMAIL_PASSWORD"]
-    except Exception:
-        st.error("Please set EMAIL, RECEIVER, and EMAIL_PASSWORD in Streamlit secrets.")
-        st.stop()
-
-    msg["From"] = sender
-    msg["To"] = receiver
-    msg["Subject"] = f"RIASEC Test Results – {info['Name']}"
+    msg["From"] = st.secrets["EMAIL"]
+    msg["To"] = st.secrets["RECEIVER"]
+    msg["Subject"] = f"RIASEC Results – {info['Name']}"
     msg.set_content(email_body)
 
     try:
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.starttls()
-            server.login(sender, password)
+            server.login(st.secrets["EMAIL"], st.secrets["EMAIL_PASSWORD"])
             server.send_message(msg)
         st.session_state.email_sent = True
     except Exception as e:
-        st.error("Failed to send email. Please check email credentials and network.")
-        st.code(traceback.format_exc())
+        st.error("Failed to send email. Please check email credentials.")
         st.stop()
 
 # ---------------- FINAL CONFIRMATION ----------------
@@ -157,3 +167,4 @@ if st.session_state.email_sent:
         "Your results have been securely sent to Tripti Chapper Careers Counselling.\n"
         "Please contact them to receive your personalized report."
     )
+
