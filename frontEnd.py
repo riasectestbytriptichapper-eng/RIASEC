@@ -64,36 +64,20 @@ questions = [
 
 st.markdown("### Rate each statement (1 = Strongly Disagree → 5 = Strongly Agree)")
 
-# ---------------- QUESTION BUTTONS ----------------
-for idx, (q, _) in enumerate(questions):
-    st.write(f"**{q}**")
-    cols = st.columns(5)
-    for i in range(1, 6):
-        selected = st.session_state.responses.get(idx) == i
-        btn_label = str(i)
-        if selected:
-            # Highlight selected in red
-            cols[i - 1].markdown(
-                f"""
-                <style>
-                div.stButton > button#{idx}_{i} {{
-                    background-color: #ff4d4d;
-                    color: white;
-                    font-weight: bold;
-                }}
-                </style>
-                """,
-                unsafe_allow_html=True,
-            )
+# ---------------- HORIZONTAL RADIO BUTTONS ----------------
+with st.form("test_form"):
+    for idx, (q, _) in enumerate(questions):
+        st.session_state.responses[idx] = st.radio(
+            q,
+            options=[1, 2, 3, 4, 5],
+            index=st.session_state.responses.get(idx, 2) - 1,
+            horizontal=True,
+            key=f"q_{idx}",
+        )
 
-        if cols[i - 1].button(btn_label, key=f"{idx}_{i}"):
-            st.session_state.responses[idx] = i
-            # No experimental_rerun needed
-
-# ---------------- CHECK IF ALL ANSWERED ----------------
-all_answered = len(st.session_state.responses) == len(questions)
-st.markdown("---")
-submit = st.button("Submit Test", disabled=not all_answered)
+    # Submit only enabled when all questions answered
+    all_answered = all(idx in st.session_state.responses for idx in range(len(questions)))
+    submit = st.form_submit_button("Submit Test", disabled=not all_answered)
 
 # ---------------- PROCESS SUBMISSION ----------------
 if submit and not st.session_state.submitted:
@@ -140,7 +124,7 @@ C: {scores['C']}
         st.session_state.email_sent = True
         st.session_state.submitted = True
 
-    except Exception as e:
+    except Exception:
         st.error("❌ Failed to send email. Check credentials.")
         st.stop()
 
