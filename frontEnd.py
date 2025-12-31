@@ -64,14 +64,37 @@ questions = [
 
 st.markdown("### Rate each statement (1 = Strongly Disagree → 5 = Strongly Agree)")
 
+# ---------------- CUSTOM BUTTON FUNCTION ----------------
+def colored_button(label, key, selected=False):
+    color = "#ff4d4d" if selected else "#e0e0e0"
+    btn_html = f"""
+    <style>
+    div.stButton > button#{key} {{
+        background-color: {color};
+        color: black;
+        width: 50px;
+        height: 40px;
+        font-weight: bold;
+        border-radius: 5px;
+        margin-right:5px;
+    }}
+    div.stButton > button#{key}:hover {{
+        background-color: #ff9999;
+    }}
+    </style>
+    """
+    st.markdown(btn_html, unsafe_allow_html=True)
+    return st.button(label, key=key)
+
+# ---------------- DISPLAY QUESTIONS ----------------
 for idx, (question, _) in enumerate(questions):
     st.write(f"**{question}**")
-
     cols = st.columns(5)
     for i in range(1, 6):
-        if cols[i - 1].button(str(i), key=f"{idx}_{i}"):
-            st.session_state.responses[idx] = i
-
+        selected = st.session_state.responses.get(idx) == i
+        with cols[i-1]:
+            if colored_button(str(i), key=f"{idx}_{i}", selected=selected):
+                st.session_state.responses[idx] = i
     if idx in st.session_state.responses:
         st.caption(f"Selected: {st.session_state.responses[idx]}")
     else:
@@ -79,18 +102,12 @@ for idx, (question, _) in enumerate(questions):
 
 # ---------------- SUBMIT BUTTON ----------------
 all_answered = len(st.session_state.responses) == len(questions)
-
 st.markdown("---")
-
-submit = st.button(
-    "Submit Test",
-    disabled=not all_answered
-)
+submit = st.button("Submit Test", disabled=not all_answered)
 
 # ---------------- PROCESS SUBMISSION ----------------
 if submit and not st.session_state.submitted:
     scores = {"R": 0, "I": 0, "A": 0, "S": 0, "E": 0, "C": 0}
-
     for i, (_, cat) in enumerate(questions):
         scores[cat] += st.session_state.responses[i]
 
@@ -129,7 +146,7 @@ C: {scores['C']}
         st.session_state.email_sent = True
 
     except Exception:
-        st.error("Failed to send email. Check credentials.")
+        st.error("❌ Failed to send email. Check credentials.")
 
 # ---------------- SUCCESS MESSAGE ----------------
 if st.session_state.email_sent:
