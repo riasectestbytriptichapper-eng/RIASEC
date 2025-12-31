@@ -65,3 +65,95 @@ questions = [
     ("I like working outdoors", "R"),
     ("I enjoy problem solving", "I"),
     ("I like artistic activities", "A"),
+    ("I like structured work", "C"),
+    ("I like influencing others", "E"),
+]
+
+st.header("Answer each question (1 = Strongly Disagree, 5 = Strongly Agree)")
+
+# ---------------- QUESTION BUTTONS ----------------
+for idx, (q, _) in enumerate(questions):
+    st.write(f"**{q}**")
+    cols = st.columns(5)
+    for i in range(1,6):
+        selected = st.session_state.responses.get(idx) == i
+        with cols[i-1]:
+            if selected:
+                st.markdown('<div style="height:5px;background-color:red;margin-bottom:2px;"></div>', unsafe_allow_html=True)
+            if st.button(str(i), key=f"{idx}_{i}"):
+                st.session_state.responses[idx] = i
+
+# Enable submit only if all questions are answered
+all_answered = len(st.session_state.responses) == len(questions)
+submit = st.button("Submit Test", disabled=not all_answered)
+
+# ---------------- PROCESS SUBMISSION ----------------
+if submit and not st.session_state.submitted:
+    # Compute RIASEC scores
+    scores = {"R":0,"I":0,"A":0,"S":0,"E":0,"C":0}
+    for idx, (_, cat) in enumerate(questions):
+        scores[cat] += st.session_state.responses[idx]
+
+    st.session_state.scores = scores
+    st.session_state.submitted = True
+
+# ---------------- EMAIL LOGIC ----------------
+if st.session_state.submitted and not st.session_state.email_sent:
+    info = st.session_state.info
+    scores = st.session_state.scores
+
+    email_body = f"""
+Name: {info['Name']}
+Age: {info['Age']}
+Education: {info['Education']}
+School: {info['School']}
+Subjects: {info['Subjects']}
+Hobbies: {info['Hobbies']}
+Dream: {info['Dream']}
+Email: {info['Email']}
+Phone: {info['Phone']}
+
+--- RIASEC SCORES ---
+R: {scores['R']}
+I: {scores['I']}
+A: {scores['A']}
+S: {scores['S']}
+E: {scores['E']}
+C: {scores['C']}
+
+Detailed Responses:
+"""
+    for idx, (q, cat) in enumerate(questions):
+        email_body += f"{q} ({cat}): {st.session_state.responses[idx]}\n"
+
+    msg = EmailMessage()
+    try:
+        sender = st.secrets["EMAIL"]
+        receiver = st.secrets["RECEIVER"]
+        password = st.secrets["EMAIL_PASSWORD"]
+    except Exception:
+        st.error("Please set EMAIL, RECEIVER, and EMAIL_PASSWORD in Streamlit secrets.")
+        st.stop()
+
+    msg["From"] = sender
+    msg["To"] = receiver
+    msg["Subject"] = f"RIASEC Test Results – {info['Name']}"
+    msg.set_content(email_body)
+
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(sender, password)
+            server.send_message(msg)
+        st.session_state.email_sent = True
+    except Exception as e:
+        st.error("Failed to send email. Please check email credentials and network.")
+        st.code(traceback.format_exc())
+        st.stop()
+
+# ---------------- FINAL CONFIRMATION ----------------
+if st.session_state.email_sent:
+    st.success(
+        "Your results have been securely sent to Tripti Chapper Careers Counselling.\n"
+        "Please contact them to receive your personalized report."
+    )
