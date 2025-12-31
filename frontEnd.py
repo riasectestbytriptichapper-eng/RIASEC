@@ -30,7 +30,6 @@ with st.form("info_form"):
     Dream = st.text_area("Your 'Impossible' Dream")
     Email = st.text_input("Email")
     Phone = st.text_input("Phone Number")
-
     start = st.form_submit_button("Start Test")
 
 if start:
@@ -71,28 +70,28 @@ questions = [
 
 st.header("Answer each question (1 = Strongly Disagree, 5 = Strongly Agree)")
 
-# ---------------- QUESTION BUTTONS (optimized) ----------------
+# ---------------- QUESTION BUTTONS ----------------
 for idx, (q, _) in enumerate(questions):
     st.write(f"**{q}**")
-    options = [1,2,3,4,5]
-    default_val = st.session_state.responses.get(idx)
-    # Use selectbox for single rerun per question
-    selected = st.selectbox(
-        "Select one:",
-        options,
-        index=options.index(default_val) if default_val else 0,
-        key=f"sel_{idx}"
-    )
-    st.session_state.responses[idx] = selected
-    # Display red highlight above the selection
-    st.markdown(
-        f'<div style="height:5px;width:50px;background-color:red;margin-bottom:5px;margin-top:-10px;"></div>'
-        if selected else "",
-        unsafe_allow_html=True
-    )
+    cols = st.columns(5)
+    # initialize in session_state
+    if idx not in st.session_state.responses:
+        st.session_state.responses[idx] = 0
 
-# Enable submit only if all questions are answered
-all_answered = len(st.session_state.responses) == len(questions)
+    for i, col in enumerate(cols, start=1):
+        color = "red" if st.session_state.responses[idx] == i else "white"
+        if col.button(str(i), key=f"{idx}_{i}"):
+            st.session_state.responses[idx] = i
+
+        # Draw red box above clicked button
+        if st.session_state.responses[idx] == i:
+            col.markdown(
+                f'<div style="height:5px;background-color:red;margin-bottom:2px;"></div>',
+                unsafe_allow_html=True
+            )
+
+# ---------------- SUBMIT BUTTON ----------------
+all_answered = all(value > 0 for value in st.session_state.responses.values())
 submit = st.button("Submit Test", disabled=not all_answered)
 
 # ---------------- PROCESS SUBMISSION ----------------
