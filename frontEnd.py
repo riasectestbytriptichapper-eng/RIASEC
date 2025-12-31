@@ -64,41 +64,19 @@ questions = [
 
 st.markdown("### Rate each statement (1 = Strongly Disagree → 5 = Strongly Agree)")
 
-# ---------------- CUSTOM BUTTON FUNCTION ----------------
-def colored_button(label, key, selected=False):
-    color = "#ff4d4d" if selected else "#e0e0e0"
-    btn_html = f"""
-    <style>
-    div.stButton > button#{key} {{
-        background-color: {color};
-        color: black;
-        width: 50px;
-        height: 40px;
-        font-weight: bold;
-        border-radius: 5px;
-        margin-right:5px;
-    }}
-    div.stButton > button#{key}:hover {{
-        background-color: #ff9999;
-    }}
-    </style>
-    """
-    st.markdown(btn_html, unsafe_allow_html=True)
-    return st.button(label, key=key)
-
-# ---------------- DISPLAY QUESTIONS ----------------
+# ---------------- BUTTON-LIKE RADIOS ----------------
 for idx, (question, _) in enumerate(questions):
     st.write(f"**{question}**")
-    cols = st.columns(5)
-    for i in range(1, 6):
-        selected = st.session_state.responses.get(idx) == i
-        with cols[i-1]:
-            if colored_button(str(i), key=f"{idx}_{i}", selected=selected):
-                st.session_state.responses[idx] = i
-    if idx in st.session_state.responses:
-        st.caption(f"Selected: {st.session_state.responses[idx]}")
-    else:
-        st.caption("Not answered")
+    options = ["1","2","3","4","5"]
+    # Show horizontal radio buttons
+    choice = st.radio(
+        "",
+        options,
+        index=options.index(str(st.session_state.responses.get(idx, "1"))) if idx in st.session_state.responses else 0,
+        horizontal=True,
+        key=f"q_{idx}"
+    )
+    st.session_state.responses[idx] = int(choice)
 
 # ---------------- SUBMIT BUTTON ----------------
 all_answered = len(st.session_state.responses) == len(questions)
