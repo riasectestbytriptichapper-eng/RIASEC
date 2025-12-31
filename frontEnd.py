@@ -75,7 +75,7 @@ with st.form("test_form"):
             key=f"q_{idx}",
         )
 
-    # Submit only enabled when all questions answered
+    # Enable submit only when all questions answered
     all_answered = all(idx in st.session_state.responses for idx in range(len(questions)))
     submit = st.form_submit_button("Submit Test", disabled=not all_answered)
 
