@@ -63,24 +63,32 @@ questions = [
 
 st.markdown("### Rate each statement (1 = Strongly Disagree → 5 = Strongly Agree)")
 
-# ---------------- BUTTON STYLE FUNCTION ----------------
-def render_button(num, selected):
-    """Render a fake button with red box if selected"""
-    style = "border: 2px solid red; padding: 10px; display:inline-block; width:40px; text-align:center; font-weight:bold; margin:2px; cursor:pointer;"
-    normal = "border: 1px solid #000; padding: 10px; display:inline-block; width:40px; text-align:center; margin:2px; cursor:pointer;"
-    return f'<div style="{style if selected else normal}">{num}</div>'
+# ---------------- BUTTON HTML FUNCTION ----------------
+def render_buttons(idx):
+    html = '<div style="display:flex; gap:10px;">'
+    for i in range(1,6):
+        selected = st.session_state.responses.get(idx) == i
+        # if selected, show red box above number
+        red_box = '<div style="width:100%;height:5px;background:red;margin-bottom:3px;"></div>' if selected else '<div style="height:8px;"></div>'
+        html += f'''
+        <div style="text-align:center; cursor:pointer;">
+            {red_box}
+            <form action="#" method="post">
+                <button name="btn_{idx}" value="{i}" style="width:40px;height:40px;">{i}</button>
+            </form>
+        </div>
+        '''
+    html += '</div>'
+    st.markdown(html, unsafe_allow_html=True)
 
 # ---------------- QUESTIONS WITH BUTTONS ----------------
 for idx, (q, _) in enumerate(questions):
     st.write(f"**{q}**")
     cols = st.columns(5)
-    for i in range(1, 6):
-        selected = st.session_state.responses.get(idx) == i
-        if cols[i-1].button("", key=f"{idx}_{i}"):
+    for i in range(1,6):
+        if cols[i-1].button(str(i), key=f"{idx}_{i}"):
             st.session_state.responses[idx] = i
-    # Render red box above selected
-    html_buttons = "    ".join([render_button(i, st.session_state.responses.get(idx) == i) for i in range(1,6)])
-    st.markdown(html_buttons, unsafe_allow_html=True)
+    render_buttons(idx)
 
 # ---------------- SUBMIT BUTTON ----------------
 all_answered = len(st.session_state.responses) == len(questions)
