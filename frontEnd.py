@@ -64,31 +64,45 @@ questions = [
 
 st.markdown("### Rate each statement (1 = Strongly Disagree → 5 = Strongly Agree)")
 
-# ---------------- QUESTION BUTTONS ----------------
-for idx, (q, _) in enumerate(questions):
-    st.write(f"**{q}**")
+# ---------------- BUTTON-BASED SELECTION ----------------
+def render_question(idx, q_text):
+    st.write(f"**{q_text}**")
     cols = st.columns(5)
-    for i in range(1, 6):
-        is_selected = st.session_state.responses.get(idx) == i
-        # Highlight selected button in red
-        button_color = "background-color:#ff4d4d;color:white;font-weight:bold;" if is_selected else ""
-        btn = cols[i - 1].button(f"{i}", key=f"{idx}_{i}", help="Click to select", args=None)
-        if btn:
-            st.session_state.responses[idx] = i
+    for i, col in enumerate(cols, 1):
+        # Check if this button is selected
+        selected = st.session_state.responses.get(idx) == i
+        # Use HTML to make button red if selected
+        if selected:
+            col.markdown(f"""
+                <button style="
+                    width: 100%;
+                    background-color: #ff4d4d;
+                    color: white;
+                    font-weight: bold;
+                    border: none;
+                    padding: 8px 0;
+                " disabled>{i}</button>
+            """, unsafe_allow_html=True)
+        else:
+            if col.button(str(i), key=f"{idx}_{i}"):
+                st.session_state.responses[idx] = i
+
+# Render all questions
+for idx, (q, _) in enumerate(questions):
+    render_question(idx, q)
 
 # ---------------- CHECK IF ALL ANSWERED ----------------
 all_answered = len(st.session_state.responses) == len(questions)
+
 st.markdown("---")
 submit = st.button("Submit Test", disabled=not all_answered)
 
 # ---------------- PROCESS SUBMISSION ----------------
 if submit and not st.session_state.submitted:
-    # Calculate scores
-    scores = {"R": 0, "I": 0, "A": 0, "S": 0, "E": 0, "C": 0}
+    scores = {"R":0,"I":0,"A":0,"S":0,"E":0,"C":0}
     for idx, (_, cat) in enumerate(questions):
         scores[cat] += st.session_state.responses[idx]
 
-    # Build email
     info = st.session_state.info
     email_body = f"""
 Name: {info['Name']}
@@ -109,7 +123,6 @@ S: {scores['S']}
 E: {scores['E']}
 C: {scores['C']}
 """
-
     # Send email
     try:
         msg = EmailMessage()
@@ -125,7 +138,6 @@ C: {scores['C']}
 
         st.session_state.email_sent = True
         st.session_state.submitted = True
-
     except Exception:
         st.error("❌ Failed to send email. Check credentials.")
         st.stop()
