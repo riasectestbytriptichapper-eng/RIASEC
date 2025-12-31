@@ -64,20 +64,22 @@ questions = [
 
 st.markdown("### Rate each statement (1 = Strongly Disagree → 5 = Strongly Agree)")
 
-# ---------------- HORIZONTAL RADIO BUTTONS ----------------
-with st.form("test_form"):
-    for idx, (q, _) in enumerate(questions):
-        st.session_state.responses[idx] = st.radio(
-            q,
-            options=[1, 2, 3, 4, 5],
-            index=st.session_state.responses.get(idx, 2) - 1,
-            horizontal=True,
-            key=f"q_{idx}",
-        )
+# ---------------- QUESTION BUTTONS ----------------
+for idx, (q, _) in enumerate(questions):
+    st.write(f"**{q}**")
+    cols = st.columns(5)
+    for i in range(1, 6):
+        is_selected = st.session_state.responses.get(idx) == i
+        # Highlight selected button in red
+        button_color = "background-color:#ff4d4d;color:white;font-weight:bold;" if is_selected else ""
+        btn = cols[i - 1].button(f"{i}", key=f"{idx}_{i}", help="Click to select", args=None)
+        if btn:
+            st.session_state.responses[idx] = i
 
-    # Enable submit only when all questions answered
-    all_answered = all(idx in st.session_state.responses for idx in range(len(questions)))
-    submit = st.form_submit_button("Submit Test", disabled=not all_answered)
+# ---------------- CHECK IF ALL ANSWERED ----------------
+all_answered = len(st.session_state.responses) == len(questions)
+st.markdown("---")
+submit = st.button("Submit Test", disabled=not all_answered)
 
 # ---------------- PROCESS SUBMISSION ----------------
 if submit and not st.session_state.submitted:
