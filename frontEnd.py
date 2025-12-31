@@ -79,7 +79,7 @@ for idx, (q, _) in enumerate(questions):
         if cols[i-1].button("", key=f"{idx}_{i}"):
             st.session_state.responses[idx] = i
     # Render red box above selected
-    html_buttons = "".join([render_button(i, st.session_state.responses.get(idx) == i) for i in range(1,6)])
+    html_buttons = "    ".join([render_button(i, st.session_state.responses.get(idx) == i) for i in range(1,6)])
     st.markdown(html_buttons, unsafe_allow_html=True)
 
 # ---------------- SUBMIT BUTTON ----------------
