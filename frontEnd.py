@@ -26,7 +26,6 @@ if not st.session_state.info:
         Dream = st.text_area("Your Dream Career")
         Email = st.text_input("Email")
         Phone = st.text_input("Phone Number")
-
         start = st.form_submit_button("Start Test")
 
     if start:
@@ -64,45 +63,37 @@ questions = [
 
 st.markdown("### Rate each statement (1 = Strongly Disagree → 5 = Strongly Agree)")
 
-# ---------------- BUTTON-BASED SELECTION ----------------
-def render_question(idx, q_text):
-    st.write(f"**{q_text}**")
-    cols = st.columns(5)
-    for i, col in enumerate(cols, 1):
-        # Check if this button is selected
-        selected = st.session_state.responses.get(idx) == i
-        # Use HTML to make button red if selected
-        if selected:
-            col.markdown(f"""
-                <button style="
-                    width: 100%;
-                    background-color: #ff4d4d;
-                    color: white;
-                    font-weight: bold;
-                    border: none;
-                    padding: 8px 0;
-                " disabled>{i}</button>
-            """, unsafe_allow_html=True)
-        else:
-            if col.button(str(i), key=f"{idx}_{i}"):
-                st.session_state.responses[idx] = i
+# ---------------- BUTTON STYLE FUNCTION ----------------
+def render_button(num, selected):
+    """Render a fake button with red box if selected"""
+    style = "border: 2px solid red; padding: 10px; display:inline-block; width:40px; text-align:center; font-weight:bold; margin:2px; cursor:pointer;"
+    normal = "border: 1px solid #000; padding: 10px; display:inline-block; width:40px; text-align:center; margin:2px; cursor:pointer;"
+    return f'<div style="{style if selected else normal}">{num}</div>'
 
-# Render all questions
+# ---------------- QUESTIONS WITH BUTTONS ----------------
 for idx, (q, _) in enumerate(questions):
-    render_question(idx, q)
+    st.write(f"**{q}**")
+    cols = st.columns(5)
+    for i in range(1, 6):
+        selected = st.session_state.responses.get(idx) == i
+        if cols[i-1].button("", key=f"{idx}_{i}"):
+            st.session_state.responses[idx] = i
+    # Render red box above selected
+    html_buttons = "".join([render_button(i, st.session_state.responses.get(idx) == i) for i in range(1,6)])
+    st.markdown(html_buttons, unsafe_allow_html=True)
 
-# ---------------- CHECK IF ALL ANSWERED ----------------
+# ---------------- SUBMIT BUTTON ----------------
 all_answered = len(st.session_state.responses) == len(questions)
-
-st.markdown("---")
 submit = st.button("Submit Test", disabled=not all_answered)
 
 # ---------------- PROCESS SUBMISSION ----------------
 if submit and not st.session_state.submitted:
+    # Calculate scores
     scores = {"R":0,"I":0,"A":0,"S":0,"E":0,"C":0}
     for idx, (_, cat) in enumerate(questions):
         scores[cat] += st.session_state.responses[idx]
 
+    # Build email
     info = st.session_state.info
     email_body = f"""
 Name: {info['Name']}
@@ -123,6 +114,7 @@ S: {scores['S']}
 E: {scores['E']}
 C: {scores['C']}
 """
+
     # Send email
     try:
         msg = EmailMessage()
@@ -138,6 +130,7 @@ C: {scores['C']}
 
         st.session_state.email_sent = True
         st.session_state.submitted = True
+
     except Exception:
         st.error("❌ Failed to send email. Check credentials.")
         st.stop()
