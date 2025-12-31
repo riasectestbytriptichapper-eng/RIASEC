@@ -5,26 +5,21 @@ import smtplib
 st.set_page_config(page_title="RIASEC Test", layout="centered")
 
 # ---------------- SESSION STATE ----------------
-if "show_test" not in st.session_state:
-    st.session_state.show_test = False
+if "responses" not in st.session_state:
+    st.session_state.responses = {}
 if "submitted" not in st.session_state:
     st.session_state.submitted = False
 if "email_sent" not in st.session_state:
     st.session_state.email_sent = False
-if "responses" not in st.session_state:
-    st.session_state.responses = {}
-if "scores" not in st.session_state:
-    st.session_state.scores = {"R":0,"I":0,"A":0,"S":0,"E":0,"C":0}
 if "info" not in st.session_state:
     st.session_state.info = {}
 
-# ---------------- TITLE ----------------
 st.title("RIASEC Career Interest Test")
 
-# ---------------- USER INFO FORM ----------------
+# ---------------- USER INFO ----------------
 with st.form("info_form"):
     Name = st.text_input("Full Name")
-    Age = st.number_input("Age", min_value=10, max_value=100)
+    Age = st.number_input("Age", 10, 100)
     Education = st.text_input("Education")
     School = st.text_input("School / University")
     Subjects = st.text_input("Subjects")
@@ -45,12 +40,8 @@ if start:
         "Hobbies": Hobbies,
         "Dream": Dream,
         "Email": Email,
-        "Phone": Phone
+        "Phone": Phone,
     }
-    st.session_state.show_test = True
-
-if not st.session_state.show_test:
-    st.stop()
 
 # ---------------- QUESTIONS ----------------
 questions = [
@@ -71,33 +62,36 @@ questions = [
     ("I like influencing others", "E"),
 ]
 
-st.header("Answer all questions (1 = Strongly Disagree → 5 = Strongly Agree)")
+st.header("Rate each statement (1 = Strongly Disagree → 5 = Strongly Agree)")
 
-with st.form("test_form"):
-    for i, (q, cat) in enumerate(questions):
-        st.session_state.responses[i] = st.radio(
-            q,
-            [1, 2, 3, 4, 5],
-            index=None,
-            key=f"q_{i}"
-        )
-
-    all_answered = len(st.session_state.responses) == len(questions) and all(
-        v is not None for v in st.session_state.responses.values()
+for i, (q, _) in enumerate(questions):
+    st.session_state.responses[i] = st.select_slider(
+        q,
+        options=[None, 1, 2, 3, 4, 5],
+        format_func=lambda x: "Select" if x is None else str(x),
+        key=f"q_{i}"
     )
 
-    submit = st.form_submit_button(
-        "Submit Test",
-        disabled=not all_answered
-    )
+# ✅ CHECK IF ALL ANSWERED
+all_answered = all(
+    st.session_state.responses.get(i) is not None
+    for i in range(len(questions))
+)
 
-# ---------------- PROCESS & EMAIL ----------------
+# ---------------- SUBMIT BUTTON ----------------
+submit = st.button(
+    "Submit Test",
+    disabled=not all_answered
+)
+
+# ---------------- PROCESS RESULTS ----------------
 if submit and not st.session_state.submitted:
-    for i, (q, cat) in enumerate(questions):
-        st.session_state.scores[cat] += st.session_state.responses[i]
+    scores = {"R": 0, "I": 0, "A": 0, "S": 0, "E": 0, "C": 0}
+
+    for i, (_, cat) in enumerate(questions):
+        scores[cat] += st.session_state.responses[i]
 
     info = st.session_state.info
-    scores = st.session_state.scores
 
     email_body = f"""
 Name: {info['Name']}
@@ -107,10 +101,8 @@ School: {info['School']}
 Subjects: {info['Subjects']}
 Hobbies: {info['Hobbies']}
 Dream: {info['Dream']}
-Email: {info['Email']}
-Phone: {info['Phone']}
 
---- RIASEC RESULTS ---
+--- RIASEC SCORES ---
 R: {scores['R']}
 I: {scores['I']}
 A: {scores['A']}
@@ -133,13 +125,13 @@ C: {scores['C']}
 
         st.session_state.email_sent = True
 
-    except Exception as e:
-        st.error("❌ Email failed to send. Please try again later.")
+    except Exception:
+        st.error("❌ Email failed. Check SMTP credentials.")
         st.stop()
 
-# ---------------- SUCCESS MESSAGE ----------------
+# ---------------- SUCCESS ----------------
 if st.session_state.email_sent:
     st.success(
-        "✅ The Administrator has received your results.\n\n"
-        "Please contact them to receive your personalized report."
+        "✅ Results sent successfully.\n\n"
+        "Please contact **mycareerhorizons@gmail.com** to receive your detailed report."
     )
