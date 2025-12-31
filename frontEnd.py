@@ -5,43 +5,43 @@ import smtplib
 st.set_page_config(page_title="RIASEC Test", layout="centered")
 
 # ---------------- SESSION STATE ----------------
+if "info" not in st.session_state:
+    st.session_state.info = {}
 if "responses" not in st.session_state:
     st.session_state.responses = {}
 if "submitted" not in st.session_state:
     st.session_state.submitted = False
 if "email_sent" not in st.session_state:
     st.session_state.email_sent = False
-if "info" not in st.session_state:
-    st.session_state.info = {}
 
-st.title("RIASEC Career Interest Test")
+# ---------------- USER INFO FORM ----------------
+if not st.session_state.info:
+    with st.form("info_form"):
+        Name = st.text_input("Full Name")
+        Age = st.number_input("Age", 10, 100)
+        Education = st.text_input("Education")
+        School = st.text_input("School / University")
+        Subjects = st.text_input("Subjects")
+        Hobbies = st.text_area("Hobbies")
+        Dream = st.text_area("Your Dream Career")
+        Email = st.text_input("Email")
+        Phone = st.text_input("Phone Number")
 
-# ---------------- USER INFO ----------------
-with st.form("info_form"):
-    Name = st.text_input("Full Name")
-    Age = st.number_input("Age", 10, 100)
-    Education = st.text_input("Education")
-    School = st.text_input("School / University")
-    Subjects = st.text_input("Subjects")
-    Hobbies = st.text_area("Hobbies")
-    Dream = st.text_area("Your Dream Career")
-    Email = st.text_input("Email")
-    Phone = st.text_input("Phone Number")
+        start = st.form_submit_button("Start Test")
 
-    start = st.form_submit_button("Start Test")
-
-if start:
-    st.session_state.info = {
-        "Name": Name,
-        "Age": Age,
-        "Education": Education,
-        "School": School,
-        "Subjects": Subjects,
-        "Hobbies": Hobbies,
-        "Dream": Dream,
-        "Email": Email,
-        "Phone": Phone,
-    }
+    if start:
+        st.session_state.info = {
+            "Name": Name,
+            "Age": Age,
+            "Education": Education,
+            "School": School,
+            "Subjects": Subjects,
+            "Hobbies": Hobbies,
+            "Dream": Dream,
+            "Email": Email,
+            "Phone": Phone,
+        }
+    st.stop()
 
 # ---------------- QUESTIONS ----------------
 questions = [
@@ -64,33 +64,45 @@ questions = [
 
 st.markdown("### Rate each statement (1 = Strongly Disagree → 5 = Strongly Agree)")
 
-# ---------------- BUTTON-LIKE RADIOS ----------------
-for idx, (question, _) in enumerate(questions):
-    st.write(f"**{question}**")
-    options = ["1","2","3","4","5"]
-    # Show horizontal radio buttons
-    choice = st.radio(
-        "",
-        options,
-        index=options.index(str(st.session_state.responses.get(idx, "1"))) if idx in st.session_state.responses else 0,
-        horizontal=True,
-        key=f"q_{idx}"
-    )
-    st.session_state.responses[idx] = int(choice)
+# ---------------- QUESTION BUTTONS ----------------
+for idx, (q, _) in enumerate(questions):
+    st.write(f"**{q}**")
+    cols = st.columns(5)
+    for i in range(1, 6):
+        selected = st.session_state.responses.get(idx) == i
+        btn_label = f"{i}"
+        if selected:
+            # Highlight selected in red
+            btn_html = f"""
+                <style>
+                div.stButton > button#{idx}_{i} {{
+                    background-color: #ff4d4d;
+                    color: white;
+                    font-weight: bold;
+                }}
+                </style>
+            """
+            st.markdown(btn_html, unsafe_allow_html=True)
 
-# ---------------- SUBMIT BUTTON ----------------
+        if cols[i - 1].button(btn_label, key=f"{idx}_{i}"):
+            st.session_state.responses[idx] = i
+            st.experimental_rerun()  # Re-run to update button color immediately
+
+# ---------------- CHECK IF ALL ANSWERED ----------------
 all_answered = len(st.session_state.responses) == len(questions)
+
 st.markdown("---")
 submit = st.button("Submit Test", disabled=not all_answered)
 
 # ---------------- PROCESS SUBMISSION ----------------
 if submit and not st.session_state.submitted:
+    # Calculate scores
     scores = {"R": 0, "I": 0, "A": 0, "S": 0, "E": 0, "C": 0}
-    for i, (_, cat) in enumerate(questions):
-        scores[cat] += st.session_state.responses[i]
+    for idx, (_, cat) in enumerate(questions):
+        scores[cat] += st.session_state.responses[idx]
 
+    # Build email
     info = st.session_state.info
-
     email_body = f"""
 Name: {info['Name']}
 Age: {info['Age']}
@@ -99,6 +111,8 @@ School: {info['School']}
 Subjects: {info['Subjects']}
 Hobbies: {info['Hobbies']}
 Dream: {info['Dream']}
+Email: {info['Email']}
+Phone: {info['Phone']}
 
 --- RIASEC SCORES ---
 R: {scores['R']}
@@ -109,6 +123,7 @@ E: {scores['E']}
 C: {scores['C']}
 """
 
+    # Send email
     try:
         msg = EmailMessage()
         msg["From"] = st.secrets["EMAIL"]
@@ -122,9 +137,11 @@ C: {scores['C']}
             server.send_message(msg)
 
         st.session_state.email_sent = True
+        st.session_state.submitted = True
 
-    except Exception:
+    except Exception as e:
         st.error("❌ Failed to send email. Check credentials.")
+        st.stop()
 
 # ---------------- SUCCESS MESSAGE ----------------
 if st.session_state.email_sent:
