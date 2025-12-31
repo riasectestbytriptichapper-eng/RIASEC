@@ -62,29 +62,32 @@ questions = [
     ("I like influencing others", "E"),
 ]
 
-st.header("Rate each statement (1 = Strongly Disagree → 5 = Strongly Agree)")
+st.markdown("### Rate each statement (1 = Strongly Disagree → 5 = Strongly Agree)")
 
-for i, (q, _) in enumerate(questions):
-    st.session_state.responses[i] = st.select_slider(
-        q,
-        options=[None, 1, 2, 3, 4, 5],
-        format_func=lambda x: "Select" if x is None else str(x),
-        key=f"q_{i}"
-    )
+for idx, (question, _) in enumerate(questions):
+    st.write(f"**{question}**")
 
-# ✅ CHECK IF ALL ANSWERED
-all_answered = all(
-    st.session_state.responses.get(i) is not None
-    for i in range(len(questions))
-)
+    cols = st.columns(5)
+    for i in range(1, 6):
+        if cols[i - 1].button(str(i), key=f"{idx}_{i}"):
+            st.session_state.responses[idx] = i
+
+    if idx in st.session_state.responses:
+        st.caption(f"Selected: {st.session_state.responses[idx]}")
+    else:
+        st.caption("Not answered")
 
 # ---------------- SUBMIT BUTTON ----------------
+all_answered = len(st.session_state.responses) == len(questions)
+
+st.markdown("---")
+
 submit = st.button(
     "Submit Test",
     disabled=not all_answered
 )
 
-# ---------------- PROCESS RESULTS ----------------
+# ---------------- PROCESS SUBMISSION ----------------
 if submit and not st.session_state.submitted:
     scores = {"R": 0, "I": 0, "A": 0, "S": 0, "E": 0, "C": 0}
 
@@ -126,12 +129,11 @@ C: {scores['C']}
         st.session_state.email_sent = True
 
     except Exception:
-        st.error("❌ Email failed. Check SMTP credentials.")
-        st.stop()
+        st.error("Failed to send email. Check credentials.")
 
-# ---------------- SUCCESS ----------------
+# ---------------- SUCCESS MESSAGE ----------------
 if st.session_state.email_sent:
     st.success(
-        "✅ Results sent successfully.\n\n"
-        "Please contact **mycareerhorizons@gmail.com** to receive your detailed report."
+        "✅ Results sent successfully!\n\n"
+        "Please contact **mycareerhorizons@gmail.com** to receive your full report."
     )
