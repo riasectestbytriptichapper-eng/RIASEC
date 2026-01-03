@@ -5,6 +5,8 @@ import traceback
 
 st.set_page_config(page_title="RIASEC Test", layout="centered")
 
+R,I,A,S,E,C =  "R","I","A","S","E","C"
+
 # ---------------- SESSION STATE ----------------
 if "show_test" not in st.session_state:
     st.session_state.show_test = False
